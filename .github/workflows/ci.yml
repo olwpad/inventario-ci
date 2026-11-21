@@ -1,0 +1,39 @@
+# Mismo pipeline que el Jenkinsfile, pero en GitHub Actions
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest --junitxml=reportes/pruebas.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-pruebas
+          path: reportes/pruebas.xml
+
+  imagen:
+    needs: pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Construir imagen
+        run: docker build -t inventario:${{ github.run_number }} .
+      - name: Prueba de humo
+        run: |
+          docker run -d --name humo-${{ github.run_id }} inventario:${{ github.run_number }}
+          sleep 3
+          docker exec humo-${{ github.run_id }} python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/salud').read().decode())"
+      - name: Limpiar contenedor de prueba
+        if: always()
+        run: docker rm -f humo-${{ github.run_id }} || true
