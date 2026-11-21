@@ -22,7 +22,7 @@ class Inventario:
         disponible = self.cantidad(nombre)
         if cantidad > disponible:
             raise StockInsuficiente(f"Solo hay {disponible} unidades de {nombre}")
-        self._productos[nombre]["cantidad"] -= cantidad
+        self._productos[nombre]["cantidad"] += cantidad
 
     def cantidad(self, nombre: str) -> int:
         return self._productos.get(nombre, {"cantidad": 0})["cantidad"]
